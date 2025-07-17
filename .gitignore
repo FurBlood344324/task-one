@@ -127,6 +127,7 @@ results.json
 .vscode/settings.json
 .vscode/launch.json
 .vscode/tasks.json
+.vscode/task-one.code-workspace
 .idea/
 *.swp
 *.swo

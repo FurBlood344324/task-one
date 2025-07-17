@@ -1,0 +1,53 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Install All Recommended Extensions",
+            "type": "shell",
+            "group": "build",
+            "windows": {
+                "command": "powershell",
+                "args": ["-Command", "foreach ($ext in (Get-Content -Raw .vscode/extensions.json | ConvertFrom-Json).recommendations) { Write-Host 'Installing' $ext; code --install-extension $ext; }"]
+            },
+            "linux": {
+                "command": "./install-extensions.sh"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "echo": true,
+                "close": true,
+                "panel": "new"
+            },
+            "problemMatcher" : []
+        },
+        {
+            "label": "Project Setup",
+            "type": "shell",
+            "group": "build",
+            "dependsOn": "Install All Recommended Extensions",
+            "windows": {
+                "command": "powershell",
+                "args": ["-ExecutionPolicy", "Bypass", "-File", "setup.ps1"]
+            },
+            "linux": {
+                "command": "./setup.sh"
+            },
+            "runOptions": {
+                "runOn": "folderOpen"
+            },
+            "presentation": {
+                "reveal": "silent",
+                "echo": true,
+                "focus": false,
+                "close": true,
+                "panel": "new"
+            },
+            "problemMatcher": []
+        }
+    ]
+}
