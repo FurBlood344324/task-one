@@ -1,0 +1,35 @@
+[tool.mypy]
+# MyPy configuration
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+check_untyped_defs = true
+disallow_any_generics = true
+disallow_incomplete_defs = true
+disallow_subclassing_any = true
+disallow_untyped_calls = true
+disallow_untyped_decorators = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+no_implicit_optional = true
+show_error_codes = true
+strict_equality = true
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_ignores = true
+
+# File monitoring ayarları
+follow_imports = "normal"
+incremental = true
+
+# Specific module configurations
+[[tool.mypy.overrides]]
+module = [
+    "matplotlib.*",
+    "seaborn.*", 
+    "sklearn.*",
+    "scipy.*",
+    "pandas.*",
+    "numpy.*"
+]
+ignore_missing_imports = true

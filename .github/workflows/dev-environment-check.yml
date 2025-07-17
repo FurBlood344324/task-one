@@ -1,0 +1,150 @@
+name: Development Setup Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  check-dev-environment:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js for VS Code CLI
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        
+    - name: Install VS Code CLI
+      run: |
+        curl -Lk 'https://code.visualstudio.com/sha/download?build=stable&os=cli-alpine-x64' --output vscode_cli.tar.gz
+        tar -xf vscode_cli.tar.gz
+        sudo mv code /usr/local/bin/
+        
+    - name: Check required extensions
+      run: |
+        echo "🔍 Gerekli VS Code extension'ları kontrol ediliyor..."
+        
+        # Gerekli extension'lar (güncel extensions.json ile uyumlu)
+        REQUIRED_EXTENSIONS=(
+          "ms-python.python"
+          "matangover.mypy"
+          "ms-python.mypy-type-checker"
+          "charliermarsh.ruff"
+        )
+        
+        MISSING_EXTENSIONS=()
+        
+        # Extensions.json dosyasından önerilen extension'ları oku
+        if [ -f ".vscode/extensions.json" ]; then
+          echo "✅ .vscode/extensions.json dosyası bulundu"
+          
+          # JSON'u parse etmek için temel Unix araçları kullan
+          # AWK ile parse et (en taşınabilir)
+          if command -v awk >/dev/null 2>&1; then
+            RECOMMENDED_EXTS=$(awk -F'"' '/"[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+"/ {
+              for(i=1;i<=NF;i++) {
+                if($i ~ /^[a-zA-Z0-9_-]+\.[a-zA-Z0-9_-]+$/) {
+                  print $i
+                }
+              }
+            }' .vscode/extensions.json)
+          else
+            # Fallback: grep + sed (her yerde mevcut)
+            RECOMMENDED_EXTS=$(grep -o '"[^"]*\.[^"]*"' .vscode/extensions.json | sed 's/"//g')
+          fi
+          
+          # Her gerekli extension'ın recommendations'da olup olmadığını kontrol et
+          for ext in "${REQUIRED_EXTENSIONS[@]}"; do
+            if echo "$RECOMMENDED_EXTS" | grep -q "^$ext$"; then
+              echo "✅ $ext - extensions.json'da mevcut"
+            else
+              MISSING_EXTENSIONS+=("$ext")
+              echo "❌ $ext - extensions.json'da bulunamadı"
+            fi
+          done
+        else
+          echo "❌ .vscode/extensions.json dosyası bulunamadı!"
+          exit 1
+        fi
+        
+        # Sonuçları değerlendir
+        if [ ${#MISSING_EXTENSIONS[@]} -eq 0 ]; then
+          echo ""
+          echo "🎉 Tüm gerekli extension'lar .vscode/extensions.json'da tanımlı!"
+          echo ""
+          echo "📋 Kontrol edilen extension'lar:"
+          for ext in "${REQUIRED_EXTENSIONS[@]}"; do
+            echo "  ✅ $ext"
+          done
+        else
+          echo ""
+          echo "🚨 Eksik extension'lar tespit edildi!"
+          echo ""
+          echo "❌ Eksik extension'lar:"
+          for ext in "${MISSING_EXTENSIONS[@]}"; do
+            echo "  - $ext"
+          done
+          echo ""
+          echo "🔧 Çözüm: .vscode/extensions.json dosyasına şu extension'ları ekleyin:"
+          for ext in "${MISSING_EXTENSIONS[@]}"; do
+            echo "  \"$ext\""
+          done
+          exit 1
+        fi
+        
+    - name: Validate extensions.json format
+      run: |
+        echo "🔧 extensions.json formatı kontrol ediliyor..."
+        
+        if ! python3 -c "import json; json.load(open('.vscode/extensions.json'))" 2>/dev/null; then
+          echo "❌ .vscode/extensions.json geçerli bir JSON formatında değil!"
+          exit 1
+        else
+          echo "✅ extensions.json formatı geçerli"
+        fi
+        
+    - name: Check extension installation script
+      run: |
+        echo "🔧 Extension kurulum script'i kontrol ediliyor..."
+        
+        if [ -f "install-extensions.sh" ]; then
+          echo "✅ install-extensions.sh script'i mevcut"
+          
+          # Script'in executable olup olmadığını kontrol et
+          if [ -x "install-extensions.sh" ]; then
+            echo "✅ install-extensions.sh executable permission'a sahip"
+          else
+            echo "⚠️  install-extensions.sh executable değil (chmod +x gerekli)"
+          fi
+          
+          # Script'in temel syntax'ını kontrol et
+          if bash -n install-extensions.sh; then
+            echo "✅ install-extensions.sh syntax kontrolü başarılı"
+          else
+            echo "❌ install-extensions.sh syntax hatası var!"
+            exit 1
+          fi
+        else
+          echo "❌ install-extensions.sh script'i bulunamadı!"
+          echo "💡 Bu script VS Code task'larında otomatik extension kurulumu için gerekli"
+          exit 1
+        fi
+        
+    - name: Summary
+      if: success()
+      run: |
+        echo ""
+        echo "🎯 Development Environment Check - BAŞARILI"
+        echo "✅ Python extension tanımlı"
+        echo "✅ MyPy type checker extensions tanımlı"
+        echo "✅ Ruff linter extension tanımlı"
+        echo "✅ extensions.json formatı geçerli"
+        echo ""
+        echo "💡 Geliştirici notu:"
+        echo "   VS Code açıldığında bu extension'ları yüklemeniz önerilecektir."
+        echo "   Otomatik kurulum: ./install-extensions.sh script'i kullanılır."
